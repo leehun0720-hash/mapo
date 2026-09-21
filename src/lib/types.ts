@@ -146,6 +146,7 @@ export interface KpiPoint {
   factConflicts: number;
   brokenLinks: number;
   includeRatio: number;
+  structuredRatio: number; // 구조화된 민원 안내 비율 (핸드북 영역 ③ 측정 지표)
 }
 
 export interface Rules {

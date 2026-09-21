@@ -10,6 +10,7 @@ import { SCORE_CAPS, SCORE_LABELS, SCORE_WEIGHTS, siteScore, type ScoreKey } fro
 import { useIssues } from "@/store/useStore";
 import { PageHeader, Stat } from "@/components/ui";
 import { DETECTOR_NAMES } from "@/data/messages";
+import { CONTENT_KPI_TARGETS, FOUR_TASKS, HANDBOOK_LINKS, KPI8_FROM_THIS_APP } from "@/data/handbook";
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
 
@@ -53,21 +54,121 @@ export default function Dashboard() {
       <PageHeader
         title="대시보드"
         sub={`실행 #${run.runId} · ${run.kind} · URL ${run.stats.urls.toLocaleString()}건 · 오류율 ${pct(run.stats.errorRate)} · LLM 비용 ${run.stats.llmCostKrw.toLocaleString()}원`}
+        right={
+          <div className="flex gap-1.5 no-print">
+            <button className="btn btn-sm" type="button" onClick={() => window.print()}>
+              인쇄
+            </button>
+            <a className="btn btn-sm" href={HANDBOOK_LINKS.areaContent} target="_blank" rel="noopener noreferrer">
+              핸드북 영역 ③ ↗
+            </a>
+          </div>
+        }
       />
+      <div className="px-6 pb-3 flex flex-wrap gap-2 items-center text-[12px] text-muted">
+        <span className="eyebrow">THREE SENTENCES</span>
+        <span>AI는 홈페이지의 거울이다 — 콘텐츠 정비가 먼저.</span>
+        <span className="hidden md:inline">·</span>
+        <span>비용의 본체는 GPU가 아니다 — 정비·측정·운영.</span>
+        <span className="hidden md:inline">·</span>
+        <span>측정 방법을 먼저 공개한다.</span>
+      </div>
 
       <section className="px-6 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3" aria-label="KPI 요약">
         <Stat label="중복률" value={pct(latest.dupRate)} hint={`지난주 ${pct(prev.dupRate)}`} onClick={() => go({ detector: "D1" })} />
         <Stat label="title 오류" value={latest.titleErrors.toLocaleString()} hint={`지난주 ${prev.titleErrors.toLocaleString()}`} onClick={() => go({ detector: "D2" })} />
-        <Stat label="90일 미갱신" value={latest.stale90d.toLocaleString()} hint="지표만 집계(이슈 아님)" />
+        <Stat label="90일 미갱신" value={latest.stale90d.toLocaleString()} hint="KPI ⑦ · 지표만 집계(이슈 아님)" />
         <Stat label="기한 만료" value={latest.expired.toLocaleString()} hint={`지난주 ${prev.expired}`} onClick={() => go({ detector: "D3" })} />
         <Stat label="사실 충돌" value={latest.factConflicts} hint={`지난주 ${prev.factConflicts}`} onClick={() => go({ detector: "D7" })} />
         <Stat label="죽은 링크" value={latest.brokenLinks} hint={`지난주 ${prev.brokenLinks}`} onClick={() => go({ detector: "D5" })} />
       </section>
 
+      <section className="px-6 mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3" aria-label="네 가지 과업">
+        <div className="card p-4 xl:col-span-2">
+          <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
+            <div>
+              <div className="eyebrow">AREA 3 · FOUR TASKS</div>
+              <h2 className="font-semibold">콘텐츠 정비 네 가지 과업 — 이 앱이 맡는 자리</h2>
+            </div>
+            <a className="text-[12px] text-accent" href={HANDBOOK_LINKS.areaContent} target="_blank" rel="noopener noreferrer">
+              핸드북 영역 ③ 콘텐츠 정비 ↗
+            </a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {FOUR_TASKS.map((t) => {
+              const n = open.filter((i) => (t.detectors as readonly string[]).includes(i.detector)).length;
+              return (
+                <div key={t.no} className="border border-border rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">
+                      <span className="mono text-muted mr-2">{String(t.no).padStart(2, "0")}</span>
+                      {t.name}
+                    </div>
+                    {t.detectors.length > 0 ? (
+                      <button className="btn btn-sm" type="button" onClick={() => go({ detector: t.detectors[0] ?? "" })} disabled={!mounted}>
+                        대기 <b>{mounted ? n : "–"}</b>
+                      </button>
+                    ) : (
+                      <span className="chip">파일럿</span>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-muted mt-1">{t.desc}</p>
+                  <p className="text-[11px] mt-1">
+                    <span className="text-muted">탐지기</span> {t.detectors.length ? t.detectors.join(" · ") : "—"} <span className="text-muted ml-2">산출물</span> {t.output}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="card p-4">
+          <div className="eyebrow">TARGETS</div>
+          <h2 className="font-semibold mb-2">측정 지표 — 챗봇 정확도의 선행 지표</h2>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>지표</th>
+                <th>이번 주</th>
+                <th>목표 방향</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CONTENT_KPI_TARGETS.map((t) => {
+                const v = latest[t.key];
+                const p = prev[t.key];
+                const isRatio = t.key === "dupRate" || t.key === "structuredRatio";
+                const better = t.key === "structuredRatio" ? v > p : v < p;
+                return (
+                  <tr key={t.key}>
+                    <td>{t.name}</td>
+                    <td className="mono whitespace-nowrap">
+                      {isRatio ? pct(v) : v.toLocaleString()}{" "}
+                      <span className={better ? "text-low" : "text-high"} aria-label={better ? "개선" : "악화"}>
+                        {better ? "▾" : "▴"}
+                      </span>
+                    </td>
+                    <td className="text-[12px] text-muted">{t.goal}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="text-[11px] text-muted mt-2">
+            핸드북 KPI 8개 중 ⑦ {KPI8_FROM_THIS_APP.name}은 이 앱이 매주 산출합니다.{" "}
+            <a className="text-accent" href={HANDBOOK_LINKS.toolKpi} target="_blank" rel="noopener noreferrer">
+              KPI 기록지 ↗
+            </a>
+          </p>
+        </div>
+      </section>
+
       <section className="px-6 mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3">
         <div className="card p-4 xl:col-span-2">
           <div className="flex items-baseline justify-between mb-2">
-            <h2 className="font-semibold">KPI ⑦ 콘텐츠 신선도 추이</h2>
+            <div>
+              <div className="eyebrow">KPI 7 · FRESHNESS</div>
+              <h2 className="font-semibold">콘텐츠 신선도 추이</h2>
+            </div>
             <span className="text-[12px] text-muted">주간 자동 산출 · 매니페스트 포함 비율 {pct(latest.includeRatio)}</span>
           </div>
           <div className="h-56">
@@ -111,7 +212,10 @@ export default function Dashboard() {
       <section className="px-6 mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3">
         <div className="card p-4 xl:col-span-2 overflow-x-auto">
           <div className="flex items-baseline justify-between mb-2">
-            <h2 className="font-semibold">사이트별 위생 점수</h2>
+            <div>
+              <div className="eyebrow">SITE SCORE</div>
+              <h2 className="font-semibold">사이트별 위생 점수</h2>
+            </div>
             <span className="text-[12px] text-muted mono">score = 100 − Σ weight × min(1, rate ÷ cap)</span>
           </div>
           <table className="tbl">

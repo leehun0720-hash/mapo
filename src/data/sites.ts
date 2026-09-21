@@ -1,4 +1,5 @@
 import type { Site } from "@/lib/types";
+import { ORG_UNITS } from "@/data/org";
 
 // 시연용 표본. 실제 28개 사이트 목록은 공공데이터포털(15127404)로 채운다 (구성명세서 4.1, 확인 필요).
 // 호스트명은 강의안·기획서에 나온 것만 쓴다. docCount는 표본 수집 가정치(추정).
@@ -116,16 +117,6 @@ export const SITES: Site[] = [
 export const siteById = (id: number) => SITES.find((s) => s.siteId === id);
 export const siteByKey = (key: string) => SITES.find((s) => s.siteKey === key);
 
-export const DEPARTMENTS = [
-  "디지털정책팀",
-  "민원여권과",
-  "건축과",
-  "주택과",
-  "문화예술과",
-  "교육청소년과",
-  "보건행정과",
-  "홍보담당관",
-  "총무과",
-  "복지정책과",
-  "망원1동",
-] as const;
+
+/** 부서 선택 목록 — 조직개편 후 조직도(org_unit) 기준 */
+export const DEPARTMENTS = ORG_UNITS.map((u) => u.name);

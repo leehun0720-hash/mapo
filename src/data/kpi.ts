@@ -28,14 +28,14 @@ export const CURRENT_RUN = 17;
 
 // KPI ⑦ 콘텐츠 신선도 주간 추이 (시연용)
 export const KPI_SERIES: KpiPoint[] = [
-  { date: "2026-08-03", dupRate: 0.312, titleErrors: 1840, stale90d: 3120, expired: 215, factConflicts: 41, brokenLinks: 388, includeRatio: 0.41 },
-  { date: "2026-08-10", dupRate: 0.31, titleErrors: 1832, stale90d: 3105, expired: 214, factConflicts: 41, brokenLinks: 371, includeRatio: 0.42 },
-  { date: "2026-08-17", dupRate: 0.298, titleErrors: 1790, stale90d: 3088, expired: 209, factConflicts: 39, brokenLinks: 352, includeRatio: 0.44 },
-  { date: "2026-08-24", dupRate: 0.281, titleErrors: 1512, stale90d: 3010, expired: 198, factConflicts: 38, brokenLinks: 340, includeRatio: 0.47 },
-  { date: "2026-08-31", dupRate: 0.264, titleErrors: 1220, stale90d: 2950, expired: 190, factConflicts: 35, brokenLinks: 301, includeRatio: 0.5 },
-  { date: "2026-09-07", dupRate: 0.241, titleErrors: 1204, stale90d: 2890, expired: 181, factConflicts: 33, brokenLinks: 288, includeRatio: 0.53 },
-  { date: "2026-09-14", dupRate: 0.22, titleErrors: 980, stale90d: 2801, expired: 176, factConflicts: 29, brokenLinks: 262, includeRatio: 0.56 },
-  { date: "2026-09-21", dupRate: 0.208, titleErrors: 951, stale90d: 2744, expired: 171, factConflicts: 27, brokenLinks: 249, includeRatio: 0.58 },
+  { date: "2026-08-03", dupRate: 0.312, titleErrors: 1840, stale90d: 3120, expired: 215, factConflicts: 41, brokenLinks: 388, includeRatio: 0.41, structuredRatio: 0.12 },
+  { date: "2026-08-10", dupRate: 0.31, titleErrors: 1832, stale90d: 3105, expired: 214, factConflicts: 41, brokenLinks: 371, includeRatio: 0.42, structuredRatio: 0.12 },
+  { date: "2026-08-17", dupRate: 0.298, titleErrors: 1790, stale90d: 3088, expired: 209, factConflicts: 39, brokenLinks: 352, includeRatio: 0.44, structuredRatio: 0.13 },
+  { date: "2026-08-24", dupRate: 0.281, titleErrors: 1512, stale90d: 3010, expired: 198, factConflicts: 38, brokenLinks: 340, includeRatio: 0.47, structuredRatio: 0.15 },
+  { date: "2026-08-31", dupRate: 0.264, titleErrors: 1220, stale90d: 2950, expired: 190, factConflicts: 35, brokenLinks: 301, includeRatio: 0.5, structuredRatio: 0.17 },
+  { date: "2026-09-07", dupRate: 0.241, titleErrors: 1204, stale90d: 2890, expired: 181, factConflicts: 33, brokenLinks: 288, includeRatio: 0.53, structuredRatio: 0.19 },
+  { date: "2026-09-14", dupRate: 0.22, titleErrors: 980, stale90d: 2801, expired: 176, factConflicts: 29, brokenLinks: 262, includeRatio: 0.56, structuredRatio: 0.22 },
+  { date: "2026-09-21", dupRate: 0.208, titleErrors: 951, stale90d: 2744, expired: 171, factConflicts: 27, brokenLinks: 249, includeRatio: 0.58, structuredRatio: 0.24 },
 ];
 
 // 사이트별 문제 문서 수 (채점용, 시연용 표본)

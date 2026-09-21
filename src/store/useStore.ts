@@ -49,7 +49,7 @@ const STATUS_OF = { approve: "approved", reject: "rejected", defer: "deferred" }
 export const useStore = create<State>()(
   persist(
     (set, get) => ({
-      reviewer: "디지털정책팀 담당자",
+      reviewer: "스마트정책과 디지털정책팀",
       decisions: {},
       actions: [],
       rules: DEFAULT_RULES,

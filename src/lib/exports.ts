@@ -5,6 +5,7 @@ import { CLUSTERS, DOCS, docById } from "@/data/docs";
 import { SITES, siteById } from "@/data/sites";
 import { CURRENT_RUN, KPI_SERIES, RUNS } from "@/data/kpi";
 import { readiness } from "@/lib/score";
+import { DEFAULT_DEPARTMENT } from "@/data/org";
 import type { Doc, Issue, Readiness } from "@/lib/types";
 
 export interface ManifestDoc {
@@ -77,7 +78,7 @@ function authority(doc: Doc): number {
   if (site?.siteKey === "nportal") a += 0.3;
   if (site?.siteKey === "main") a += 0.2;
   if (doc.postedAt && doc.postedAt >= "2026-01-01") a += 0.1;
-  if (doc.department && doc.department !== "디지털정책팀") a += 0.05;
+  if (doc.department && doc.department !== DEFAULT_DEPARTMENT) a += 0.05;
   return Math.min(1, Math.round(a * 100) / 100);
 }
 
@@ -239,6 +240,7 @@ export function kpiJson(issues: Issue[], manifest: Manifest) {
     fact_conflicts: latest.factConflicts,
     broken_links: latest.brokenLinks,
     include_ratio: latest.includeRatio,
+    structured_ratio: latest.structuredRatio,
     readiness_distribution_sample: dist,
     open_issues_by_department: byDept,
     llm_cost_krw: run.stats.llmCostKrw,
