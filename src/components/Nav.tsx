@@ -26,19 +26,19 @@ export function Nav() {
   const run = RUNS.find((r) => r.runId === CURRENT_RUN);
 
   return (
-    <aside className="w-56 shrink-0 border-r border-border bg-surface flex flex-col sticky top-0 h-screen">
+    <aside className="w-full lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col lg:sticky lg:top-0 lg:h-screen">
       <div className="px-4 py-4 border-b border-border">
         <div className="text-[11px] text-muted tracking-wide">마포구청 · 콘텐츠 건강검진</div>
         <div className="font-semibold text-[15px] leading-tight mt-0.5">콘텐츠 위생관리</div>
       </div>
-      <nav className="p-2 flex-1" aria-label="주 메뉴">
+      <nav className="p-2 lg:flex-1 flex lg:flex-col gap-1 lg:gap-0 overflow-x-auto" aria-label="주 메뉴">
         {ITEMS.map((it) => {
           const active = it.href === "/" ? path === "/" : path.startsWith(it.href);
           return (
             <Link
               key={it.href}
               href={it.href}
-              className={`flex items-center justify-between px-3 py-2 rounded-md text-[13px] mb-0.5 ${
+              className={`flex items-center gap-2 lg:justify-between px-3 py-2 rounded-md text-[13px] lg:mb-0.5 whitespace-nowrap ${
                 active ? "bg-accent-soft text-accent font-medium" : "hover:bg-background"
               }`}
               aria-current={active ? "page" : undefined}
@@ -53,12 +53,12 @@ export function Nav() {
           );
         })}
         {mounted && critical > 0 && (
-          <div className="mx-2 mt-3 p-2 rounded-md border border-critical/40 text-[12px] text-critical" role="alert">
+          <div className="mx-2 lg:mt-3 p-2 rounded-md border border-critical/40 text-[12px] text-critical whitespace-nowrap self-center lg:self-auto" role="alert">
             개인정보 긴급 이슈 {critical}건 — 즉시 조치
           </div>
         )}
       </nav>
-      <div className="p-3 border-t border-border text-[12px] text-muted space-y-2">
+      <div className="hidden lg:block p-3 border-t border-border text-[12px] text-muted space-y-2">
         <label className="block">
           <span className="block mb-1">승인자</span>
           <input

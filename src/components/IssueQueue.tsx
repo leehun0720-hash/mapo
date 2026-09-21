@@ -78,7 +78,7 @@ export function IssueQueue() {
       const now = Date.now();
       setTiming((t) => ({ start: now, durations: [...t.durations, now - t.start].slice(-50) }));
       if (targets.length > 1) {
-        bulkDecide(targets, decision, note || `묶음 ${decision}`);
+        bulkDecide(targets, decision, note);
         setSelected(new Set());
       } else {
         const iss = issues.find((i) => i.issueId === targets[0])!;
@@ -160,9 +160,9 @@ export function IssueQueue() {
   if (!mounted) return <div className="p-6 text-muted">불러오는 중…</div>;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-col lg:flex-row lg:h-screen">
       {/* 왼쪽: 목록 */}
-      <div className="w-[420px] shrink-0 border-r border-border flex flex-col">
+      <div className="w-full lg:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col max-h-[60vh] lg:max-h-none">
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex gap-1" role="tablist" aria-label="등급">
             {[
@@ -267,7 +267,7 @@ export function IssueQueue() {
       </div>
 
       {/* 오른쪽: 증거 패널 */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {!current ? (
           <Empty text="이슈를 선택하세요." />
         ) : (

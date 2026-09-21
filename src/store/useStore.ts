@@ -78,9 +78,10 @@ export const useStore = create<State>()(
         }));
       },
       bulkDecide: (issueIds, decision, note) => {
+        const label = { approve: "묶음 승인", reject: "묶음 반려", defer: "묶음 보류" }[decision];
         for (const id of issueIds) {
           const base = ISSUES.find((i) => i.issueId === id);
-          get().decide(id, decision, decision === "approve" ? (base?.suggestion?.disposition ?? null) : null, note);
+          get().decide(id, decision, decision === "approve" ? (base?.suggestion?.disposition ?? null) : null, note || label);
         }
       },
       reopen: (issueId) =>

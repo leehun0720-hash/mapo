@@ -158,20 +158,33 @@ export function canonicalMapCsv(canonicalOverrides: Record<number, { docId: numb
       rows.push([d.canonicalUrl, canon.canonicalUrl, canonicalOverrides[c.clusterId] ? "사람 지정" : c.canonicalRule, c.clusterId]);
     }
   }
-  for (const d of DOCS) for (const a of d.aliasUrls) rows.push([a, d.canonicalUrl, "① owner_path_prefixes", d.clusterId ?? ""]);
+  // alias_urls 중 이미 문서로 수집된 URL은 클러스터 행이 담당한다(중복 방지). 나머지만 추가한다.
+  const seen = new Set(rows.slice(1).map((r) => String(r[0])));
+  const docUrls = new Set(DOCS.map((d) => d.canonicalUrl));
+  for (const d of DOCS)
+    for (const a of d.aliasUrls) {
+      if (seen.has(a) || docUrls.has(a)) continue;
+      seen.add(a);
+      rows.push([a, d.canonicalUrl, "① owner_path_prefixes", d.clusterId ?? ""]);
+    }
   return csv(rows);
 }
 
 export function redirectMapCsv(issues: Issue[]): string {
   const rows: (string | number)[][] = [["from_url", "to_url", "type", "reason"]];
+  const seen = new Set<string>();
   for (const i of issues) {
     if (i.status !== "approved" || i.suggestion?.disposition !== "redirect") continue;
     const to = i.suggestion.canonicalUrl ?? docById(i.docId)?.canonicalUrl ?? "";
-    for (const id of i.relatedDocIds) {
-      const d = docById(id);
-      if (d) rows.push([d.canonicalUrl, to, 301, i.code]);
+    const froms = [
+      ...i.relatedDocIds.map((id) => docById(id)?.canonicalUrl).filter((u): u is string => !!u),
+      ...(docById(i.docId)?.aliasUrls ?? []),
+    ];
+    for (const from of froms) {
+      if (from === to || seen.has(from)) continue; // 같은 URL 중복·자기 자신 제외
+      seen.add(from);
+      rows.push([from, to, 301, i.code]);
     }
-    for (const a of docById(i.docId)?.aliasUrls ?? []) rows.push([a, to, 301, i.code]);
   }
   return csv(rows);
 }

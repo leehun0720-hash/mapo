@@ -7,8 +7,12 @@ import { docById } from "@/data/docs";
 export function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const q = (p.get("q") ?? "").toLowerCase();
-  const page = Math.max(1, Number(p.get("page") ?? 1));
-  const size = Math.min(200, Math.max(1, Number(p.get("size") ?? 50)));
+  const num = (k: string, dflt: number) => {
+    const n = Number(p.get(k));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : dflt;
+  };
+  const page = num("page", 1);
+  const size = Math.min(200, num("size", 50));
   const list = ISSUES.filter((i) => {
     for (const k of ["detector", "code", "severity", "department", "status", "grade"] as const) {
       const v = p.get(k);
