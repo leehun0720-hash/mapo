@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Disposition, Issue } from "@/lib/types";
 import { useIssues, useStore } from "@/store/useStore";
 import { DEPARTMENTS } from "@/data/sites";
-import { DETECTOR_NAMES, DISPOSITION_LABEL, ISSUE_MESSAGES, REJECT_REASONS } from "@/data/messages";
+import { DETECTOR_NAMES, DISPOSITION_EVIDENCE, DISPOSITION_LABEL, ISSUE_MESSAGES, REJECT_REASONS } from "@/data/messages";
+import { versionConflict } from "@/lib/exports";
 import { docById } from "@/data/docs";
 import { GradeBadge, SeverityBadge, StatusBadge, Empty } from "@/components/ui";
 import { Evidence } from "@/components/Evidence";
@@ -21,6 +22,9 @@ export function IssueQueue() {
   const bulkDecide = useStore((s) => s.bulkDecide);
   const reopen = useStore((s) => s.reopen);
   const decisions = useStore((s) => s.decisions);
+  const proposalEdits = useStore((s) => s.proposalEdits);
+  const saveProposalEdit = useStore((s) => s.saveProposalEdit);
+  const reviewer = useStore((s) => s.reviewer);
   const mounted = useMounted();
 
   const get = (k: string) => params.get(k) ?? "";
@@ -58,6 +62,7 @@ export function IssueQueue() {
   const [editTitle, setEditTitle] = useState("");
   const [editDisp, setEditDisp] = useState<Disposition | "">("");
   const [timing, setTiming] = useState<{ start: number; durations: number[] }>(() => ({ start: Date.now(), durations: [] }));
+  const [blocked, setBlocked] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   // 필터가 바뀌면 커서·선택을 초기화 (렌더 중 상태 조정 패턴)
@@ -78,12 +83,15 @@ export function IssueQueue() {
       const now = Date.now();
       setTiming((t) => ({ start: now, durations: [...t.durations, now - t.start].slice(-50) }));
       if (targets.length > 1) {
-        bulkDecide(targets, decision, note);
+        const r = bulkDecide(targets, decision, note);
         setSelected(new Set());
+        setBlocked(r.blocked ? `${r.done}건 처리, ${r.blocked}건은 자기 승인 금지로 건너뜀(수정안 작성자 = 승인자).` : null);
       } else {
         const iss = issues.find((i) => i.issueId === targets[0])!;
         const disp = decision === "approve" ? ((editDisp || iss.suggestion?.disposition) ?? null) : null;
-        decide(targets[0], decision, disp, note, editTitle || undefined);
+        const err = decide(targets[0], decision, disp, note, editTitle || undefined);
+        setBlocked(err);
+        if (err) return;
       }
       setEditing(false);
       setRejecting(false);
@@ -328,10 +336,46 @@ export function IssueQueue() {
                     </label>
                   )}
                 </div>
-                <div className="text-[11px] text-muted mt-2">수정 후 <kbd>A</kbd> 승인하면 수정된 제안이 기록됩니다.</div>
+                <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
+                  <div className="text-[11px] text-muted">
+                    [수정안 저장]은 작성자({reviewer})를 기록합니다. 작성자는 그 수정안을 승인할 수 없고, 다른 검토자(소관 부서)가 승인합니다 — REQ06.
+                  </div>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    type="button"
+                    onClick={() => {
+                      saveProposalEdit(current.issueId, { disposition: (editDisp || current.suggestion?.disposition) ?? null, newTitle: editTitle || current.suggestion?.newTitle });
+                      setEditing(false);
+                      setEditTitle("");
+                      setEditDisp("");
+                    }}
+                  >
+                    수정안 저장
+                  </button>
+                </div>
               </div>
             )}
 
+            {blocked && (
+              <div className="card p-3 mt-3 border-critical text-[13px] text-critical" role="alert">
+                {blocked}
+                <button className="btn btn-sm ml-2" type="button" onClick={() => setBlocked(null)}>닫기</button>
+              </div>
+            )}
+            {proposalEdits[current.issueId] && (
+              <div className="text-[12px] text-muted mt-3">
+                수정안 작성 {proposalEdits[current.issueId].author} · {proposalEdits[current.issueId].editedAt.slice(0, 19).replace("T", " ")}
+                {proposalEdits[current.issueId].author.trim() === reviewer.trim() && <span className="text-high"> · 현재 승인자와 동일 — 승인 불가</span>}
+              </div>
+            )}
+            {(() => {
+              const c = versionConflict(current);
+              return c ? (
+                <div className="card p-3 mt-3 border-high text-[13px]" role="alert">
+                  <b className="text-high">버전 충돌(409)</b> — 승인 기준 원문 v{c.base}, 현재 v{c.current}. 승인 뒤 원문이 바뀌어 적용·내보내기에서 제외됩니다. 새 원문으로 다시 검토하세요 (REQ07).
+                </div>
+              ) : null;
+            })()}
             {decisions[current.issueId] && (
               <div className="text-[12px] text-muted mt-3">
                 {decisions[current.issueId].decidedBy} · {decisions[current.issueId].decidedAt.slice(0, 19).replace("T", " ")} · {DISPOSITION_LABEL[decisions[current.issueId].disposition ?? ""] ?? ""} {decisions[current.issueId].note}
@@ -349,7 +393,12 @@ export function IssueQueue() {
               <div className="space-y-3">
                 <div className="card p-4">
                   <h2 className="text-[12px] text-muted mb-1">제안 조치</h2>
-                  {current.suggestion?.disposition && <div className="font-medium">{DISPOSITION_LABEL[current.suggestion.disposition]}</div>}
+                  {current.suggestion?.disposition && (
+                    <>
+                      <div className="font-medium">{DISPOSITION_LABEL[current.suggestion.disposition]}</div>
+                      <div className="text-[11px] text-muted">필수 승인/증빙: {DISPOSITION_EVIDENCE[current.suggestion.disposition]}</div>
+                    </>
+                  )}
                   {current.suggestion?.newTitle && <div className="mono text-[12px] mt-1 break-all">→ {current.suggestion.newTitle}</div>}
                   {current.suggestion?.canonicalUrl && <div className="mono text-[12px] mt-1 break-all">대표: {current.suggestion.canonicalUrl}</div>}
                   {current.suggestion?.text && <p className="text-[13px] mt-1">{current.suggestion.text}</p>}
@@ -361,7 +410,12 @@ export function IssueQueue() {
                   {doc ? (
                     <>
                       <div className="text-[13px] font-medium">{doc.h1 ?? "(h1 없음)"}</div>
-                      <div className="text-[12px] text-muted">{doc.pageType} · {doc.department ?? "부서 미상"} {doc.postedAt && `· 게시 ${doc.postedAt}`}</div>
+                      <div className="text-[12px] text-muted">{doc.pageType} · {doc.department ?? "부서 미입력"} {doc.postedAt && `· 게시 ${doc.postedAt}`}</div>
+                      <div className="text-[11px] text-muted mono">
+                        v{doc.version}{doc.contentType ? ` · ${doc.contentType}` : ""}{doc.reviewedAt ? ` · 검토 ${doc.reviewedAt}` : ""}{doc.expiresAt ? ` · 만료 ${doc.expiresAt}` : ""}
+                        {doc.recordStatus === "archive" ? " · 보존 기록" : ""}{doc.personalDataFlag ? " · PII" : ""}
+                      </div>
+                      {doc.factualReviewer && <div className="text-[11px] text-muted">사실 승인자 {doc.factualReviewer}</div>}
                       <a className="mono text-[12px] text-accent break-all block mt-1" href={doc.canonicalUrl} target="_blank" rel="noopener noreferrer">{doc.canonicalUrl}</a>
                       {doc.aliasUrls.length > 0 && <div className="text-[11px] text-muted mt-1">별칭 URL {doc.aliasUrls.length}개</div>}
                     </>

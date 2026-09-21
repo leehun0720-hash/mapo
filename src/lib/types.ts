@@ -24,9 +24,14 @@ export type Disposition =
   | "redirect"
   | "archive"
   | "exclude_index"
+  | "merge"
   | "keep";
 export type Readiness = "ready" | "fix_first" | "exclude";
-export type DetectorId = "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" | "D8";
+export type DetectorId = "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" | "D8" | "D9";
+
+/** 콘텐츠 대장 확장 필드 (기획서 11장) */
+export type Classification = "public" | "internal";
+export type RecordStatus = "current" | "archive";
 
 export interface Site {
   siteId: number;
@@ -60,6 +65,15 @@ export interface Doc {
   contentSha256: string;
   clusterId: number | null;
   lang: string;
+  /** 로컬 버전 번호. 입력 해시(contentSha256)와는 다른 식별자 */
+  version: number;
+  contentType?: string; // 공고 | 상시 안내 | 정책 | 보존 기록
+  reviewedAt?: string | null;
+  expiresAt?: string | null;
+  classification?: Classification;
+  personalDataFlag?: boolean;
+  recordStatus?: RecordStatus;
+  factualReviewer?: string | null; // 사실 승인자(소관 부서 책임자)
 }
 
 export interface Cluster {
@@ -76,6 +90,8 @@ export interface IssueEvidence {
   compare?: { label: string; url: string; text?: string }[];
   signals?: { name: string; strength: "강" | "약"; detail: string }[];
   values?: { value: string; url: string; quote: string; postedAt?: string }[];
+  /** D6 6개 안내 필드 — 원문에 없는 값은 null (추측 금지) */
+  fields?: { name: string; value: string | null; quote: string | null }[];
   title?: string | null;
   h1?: string | null;
   breadcrumb?: string[];
@@ -111,6 +127,8 @@ export interface Issue {
   firstSeenRun: number;
   lastSeenRun: number;
   fixtureId?: string; // F1~F9 회귀 사례
+  /** 승인 시점의 원문 버전. 현재 버전과 다르면 적용 거부(409) — REQ07 */
+  approvedBaseVersion?: number;
 }
 
 export interface Action {
@@ -134,6 +152,8 @@ export interface Run {
     errorRate: number;
     llmCostKrw: number;
     durationMin: number;
+    /** 커버리지 = 성공 점검 ÷ 합의 범위. 실패는 분모에 섞지 않고 따로 보고 */
+    coverage?: { agreed: number; checked: number; failed: { access: number; extract: number; unsupported: number } };
   };
 }
 
@@ -155,4 +175,6 @@ export interface Rules {
   citizenBoards: string[];
   boardPairs: { legacy: string; current: string; authority: "legacy" | "current" }[];
   subjectAliases: Record<string, string[]>;
+  /** 검토 주기 제안값(일). 법정 갱신 기한·자동 삭제 기준이 아님 */
+  reviewPeriods: { notice: number; guide: number; policy: number; record: number };
 }

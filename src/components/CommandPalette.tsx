@@ -25,6 +25,8 @@ const PAGES: Hit[] = [
   { kind: "화면", title: "규칙 편집", sub: "시한 키워드 · 잡음 파라미터 · 게시판 쌍", href: "/rules" },
   { kind: "화면", title: "내보내기", sub: "tickets.xlsx · manifest.json · sitemap.xml", href: "/exports" },
   { kind: "화면", title: "검사 도구", sub: "URL 정규화 · 개인정보 · title 규칙", href: "/tools" },
+  { kind: "화면", title: "사업 · 견적", sub: "상품 4종 · 원가 견적 계산 · 12개월 현금 · 90일 WBS", href: "/program" },
+  { kind: "화면", title: "검수 · 관문", sub: "요구검수 16 · 오픈 관문 9 · 위험 10 · 첫 미팅 질문 10", href: "/readiness" },
   { kind: "화면", title: "매뉴얼 · 도움말", sub: "사용법 · 승인 5원칙 · 용어집", href: "/help" },
 ];
 

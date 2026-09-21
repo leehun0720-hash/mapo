@@ -15,6 +15,8 @@ const ITEMS = [
   { href: "/rules", label: "규칙 편집", no: "04" },
   { href: "/exports", label: "내보내기", no: "05" },
   { href: "/tools", label: "검사 도구", no: "06" },
+  { href: "/program", label: "사업 · 견적", no: "07" },
+  { href: "/readiness", label: "검수 · 관문", no: "08" },
   { href: "/help", label: "매뉴얼 · 도움말", no: "?" },
 ];
 
@@ -34,7 +36,7 @@ export function Nav() {
         <div>
           <div className="eyebrow">MAPO-GU × TENAI · 2026</div>
           <div className="serif font-bold text-[16px] leading-tight mt-0.5 text-ink">콘텐츠 위생관리</div>
-          <div className="text-[11px] text-muted mt-0.5">AI가 읽을 원료의 건강검진</div>
+          <div className="text-[11px] text-muted mt-0.5">TenAI ContentCare · AI가 읽을 원료의 건강검진</div>
         </div>
         <ThemeToggle className="lg:hidden" />
       </div>

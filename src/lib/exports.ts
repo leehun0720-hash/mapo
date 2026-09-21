@@ -24,6 +24,9 @@ export interface ManifestDoc {
   posted_at: string | null;
   last_verified: string;
   valid_until: string | null;
+  version: number;
+  record_status: "current" | "archive";
+  content_type: string | null;
 }
 
 export interface Manifest {
@@ -95,7 +98,13 @@ export function buildManifest(
       const ruleBased = r.reasons.some((x) => x === "NON_CANONICAL" || x.startsWith("PAGE_TYPE_") || x === "PII" || x === "BOARD_OUT_OF_WINDOW" || x === "APPROVED_EXCLUDE");
       if (!ruleBased) index = "hold";
     }
-    const titleOverride = issues.find((i) => i.docId === doc.docId && i.status === "approved" && i.suggestion?.newTitle && !i.suggestion.newTitle.includes("{"))?.suggestion?.newTitle ?? null;
+    const titleOverride = issues.find((i) => i.docId === doc.docId && approvedAndValid(i) && i.suggestion?.newTitle && !i.suggestion.newTitle.includes("{"))?.suggestion?.newTitle ?? null;
+    // 소관 부서(책임자) 미입력 문서는 정본 확인 주체가 없으므로 include하지 않는다
+    const ownerMissing = issues.some((i) => i.code === "D3_OWNER_MISSING" && i.docId === doc.docId && (i.status === "open" || i.status === "regressed" || i.status === "deferred"));
+    if (ownerMissing) {
+      if (!r.reasons.includes("OWNER_MISSING")) r.reasons.push("OWNER_MISSING");
+      if (index === "include") index = "hold";
+    }
     return {
       doc_id: doc.docId,
       canonical_url: doc.canonicalUrl,
@@ -111,12 +120,15 @@ export function buildManifest(
       content_sha256: doc.contentSha256,
       posted_at: doc.postedAt,
       last_verified: TODAY,
-      valid_until: null,
+      valid_until: doc.expiresAt ?? null,
+      version: doc.version,
+      record_status: doc.recordStatus ?? "current",
+      content_type: doc.contentType ?? null,
     };
   });
   const facts: Manifest["facts"] = [];
   for (const i of issues) {
-    if (i.detector === "D7" && i.status === "approved" && i.evidence.values?.length) {
+    if (i.detector === "D7" && approvedAndValid(i) && i.evidence.values?.length) {
       const best = i.evidence.values[0];
       const [subject, attribute, qualifier] = i.code === "D7_CONFLICT_FEE" ? ["여권 재발급", "fee", "10년 복수여권(58면)"] : ["건축물대장 발급", "phone", ""];
       facts.push({
@@ -140,12 +152,61 @@ export function buildManifest(
   };
 }
 
+/** 스프레드시트 수식 주입 보호 — =, +, -, @, 탭, CR로 시작하는 셀은 작은따옴표를 앞에 붙인다 (REQ16) */
+export function protectCell(s: string): string {
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+}
+
 function csv(rows: (string | number | null | undefined)[][]): string {
   const esc = (v: string | number | null | undefined) => {
-    const s = v == null ? "" : String(v);
+    const s = protectCell(v == null ? "" : String(v));
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return "﻿" + rows.map((r) => r.map(esc).join(",")).join("\r\n");
+}
+
+/** 승인 기준 버전 ≠ 현재 원문 버전이면 적용 거부 (REQ07, 409). 내보내기에서 제외하고 충돌 목록으로 보고 */
+export function versionConflict(issue: Issue): { base: number; current: number } | null {
+  const doc = docById(issue.docId);
+  if (!doc || issue.status !== "approved" || issue.approvedBaseVersion == null) return null;
+  return issue.approvedBaseVersion !== doc.version ? { base: issue.approvedBaseVersion, current: doc.version } : null;
+}
+
+export function approvedAndValid(issue: Issue): boolean {
+  return issue.status === "approved" && !versionConflict(issue);
+}
+
+export function listConflicts(issues: Issue[]) {
+  return issues
+    .map((i) => ({ issue: i, conflict: versionConflict(i) }))
+    .filter((x): x is { issue: Issue; conflict: { base: number; current: number } } => !!x.conflict);
+}
+
+/** 승인 지식 JSONL — 공개·현행·미만료 문서의 include 항목과 승인된 사실. 보존/PII 후보 제외 (기획서 18장) */
+export function knowledgeJsonl(issues: Issue[], manifest: Manifest, today = TODAY): string {
+  const lines: string[] = [];
+  for (const m of manifest.documents) {
+    if (m.index !== "include") continue;
+    const doc = docById(m.doc_id);
+    if (!doc || doc.classification === "internal" || doc.personalDataFlag || doc.recordStatus === "archive") continue;
+    if (doc.expiresAt && doc.expiresAt < today) continue;
+    lines.push(
+      JSON.stringify({
+        doc_id: m.doc_id,
+        url: m.canonical_url,
+        title: m.title_override ?? m.title,
+        department: m.department,
+        content_type: doc.contentType ?? null,
+        version: doc.version,
+        valid_until: doc.expiresAt ?? null,
+        reviewed_at: doc.reviewedAt ?? null,
+        text: doc.bodyExcerpt,
+        source_hash: doc.contentSha256,
+      }),
+    );
+  }
+  for (const f of manifest.facts) lines.push(JSON.stringify({ kind: "fact", ...f }));
+  return lines.join("\n") + (lines.length ? "\n" : "");
 }
 
 export function canonicalMapCsv(canonicalOverrides: Record<number, { docId: number }> = {}): string {
@@ -175,7 +236,7 @@ export function redirectMapCsv(issues: Issue[]): string {
   const rows: (string | number)[][] = [["from_url", "to_url", "type", "reason"]];
   const seen = new Set<string>();
   for (const i of issues) {
-    if (i.status !== "approved" || i.suggestion?.disposition !== "redirect") continue;
+    if (!approvedAndValid(i) || i.suggestion?.disposition !== "redirect") continue;
     const to = i.suggestion.canonicalUrl ?? docById(i.docId)?.canonicalUrl ?? "";
     const froms = [
       ...i.relatedDocIds.map((id) => docById(id)?.canonicalUrl).filter((u): u is string => !!u),
@@ -193,7 +254,7 @@ export function redirectMapCsv(issues: Issue[]): string {
 export function titleFixesCsv(issues: Issue[]): string {
   const rows: (string | number)[][] = [["url", "current_title", "suggested_title", "code", "template"]];
   for (const i of issues) {
-    if (i.detector !== "D2" || i.status !== "approved") continue;
+    if (i.detector !== "D2" || !approvedAndValid(i)) continue;
     const d = docById(i.docId);
     const tmpl = i.code === "D2_T3_MASS_SHARED" ? "Y" : "N";
     rows.push([d?.canonicalUrl ?? "", d?.title ?? "", i.suggestion?.newTitle ?? "", i.code, tmpl]);
@@ -208,7 +269,7 @@ export function titleFixesCsv(issues: Issue[]): string {
 export function noindexCsv(issues: Issue[], decisions: Record<number, { decidedBy: string; decidedAt: string }>): string {
   const rows: (string | number)[][] = [["url", "reason", "approved_by", "approved_at"]];
   for (const i of issues) {
-    if (i.status !== "approved") continue;
+    if (!approvedAndValid(i)) continue;
     const disp = i.suggestion?.disposition;
     if (disp !== "archive" && disp !== "exclude_index") continue;
     const d = docById(i.docId);
@@ -241,6 +302,9 @@ export function kpiJson(issues: Issue[], manifest: Manifest) {
     broken_links: latest.brokenLinks,
     include_ratio: latest.includeRatio,
     structured_ratio: latest.structuredRatio,
+    coverage: run.stats.coverage
+      ? { agreed: run.stats.coverage.agreed, checked: run.stats.coverage.checked, ratio: run.stats.coverage.checked / run.stats.coverage.agreed, failed: run.stats.coverage.failed }
+      : null,
     readiness_distribution_sample: dist,
     open_issues_by_department: byDept,
     llm_cost_krw: run.stats.llmCostKrw,

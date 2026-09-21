@@ -83,6 +83,24 @@ export default function Dashboard() {
         <Stat label="죽은 링크" value={latest.brokenLinks} hint={`지난주 ${prev.brokenLinks}`} onClick={() => go({ detector: "D5" })} />
       </section>
 
+      {run.stats.coverage && (
+        <section className="px-6 mt-4" aria-label="점검 커버리지">
+          <div className="card p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div>
+              <div className="eyebrow">COVERAGE</div>
+              <div className="text-[13px]">
+                점검 커버리지 <b className="text-[18px]">{pct(run.stats.coverage.checked / run.stats.coverage.agreed)}</b>
+                <span className="text-muted"> = 성공 점검 {run.stats.coverage.checked.toLocaleString()} ÷ 합의 범위 {run.stats.coverage.agreed.toLocaleString()} · 목표 ≥95%</span>
+              </div>
+            </div>
+            <div className="text-[12px] text-muted">
+              실패는 분모에 섞지 않고 따로 보고: 접근 불가 {run.stats.coverage.failed.access} · 추출 실패 {run.stats.coverage.failed.extract} · 미지원 첨부 {run.stats.coverage.failed.unsupported}
+              <span className="ml-2">(미점검 자료를 정상으로 세지 않는다)</span>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="px-6 mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3" aria-label="네 가지 과업">
         <div className="card p-4 xl:col-span-2">
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">

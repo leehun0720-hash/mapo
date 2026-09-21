@@ -92,6 +92,24 @@ export default function RulesPage() {
           preview={(v) => `citizen_post 판정 경로 ${v.length}개`}
         />
         <div className="card p-4">
+          <h2 className="font-semibold">검토 주기 제안값 (D3 · 신선도)</h2>
+          <p className="text-[12px] text-muted mb-2">공고 30 · 상시 안내 90 · 정책 180 · 보존 기록 365(일). 검토 주기일 뿐 법정 갱신 기한이나 자동 삭제 기준이 아니다. 미갱신 ≠ 오류.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(["notice", "guide", "policy", "record"] as const).map((k) => (
+              <label key={k} className="text-[12px]">
+                {{ notice: "공고", guide: "상시 안내", policy: "정책", record: "보존 기록" }[k]} (일)
+                <input
+                  className="input mt-1 mono"
+                  type="number"
+                  min={1}
+                  value={rules.reviewPeriods[k]}
+                  onChange={(e) => save("reviewPeriods", { ...rules.reviewPeriods, [k]: Math.max(1, Number(e.target.value) || 1) }, `검토 주기 ${k} → ${e.target.value}일`)}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="card p-4">
           <h2 className="font-semibold">게시판 쌍 (D4 이원화)</h2>
           <p className="text-[12px] text-muted mb-2">권위 출처 기본값은 current(nPortal). 기관 확인 필요.</p>
           <table className="tbl">

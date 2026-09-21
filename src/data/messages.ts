@@ -16,6 +16,7 @@ export const DETECTOR_NAMES: Record<string, string> = {
   D6: "첨부 의존",
   D7: "사실 충돌",
   D8: "개인정보",
+  D9: "접근성·지시문",
 };
 
 export const ISSUE_MESSAGES: Record<string, IssueMessage> = {
@@ -89,6 +90,12 @@ export const ISSUE_MESSAGES: Record<string, IssueMessage> = {
     label: "담당부서·전화가 옛 조직",
     what: "페이지의 담당부서 또는 전화번호가 현재 조직도에 없습니다. 조직개편 전 정보로 보입니다.",
     fix: "현재 조직도 기준으로 담당부서·전화번호를 갱신해 주세요.",
+    detectorName: "낡음",
+  },
+  D3_OWNER_MISSING: {
+    label: "담당부서(책임자) 미입력",
+    what: "이 페이지에는 소관 부서나 사실 승인 책임자가 적혀 있지 않아, 정본을 누가 확인할지 정할 수 없습니다.",
+    fix: "담당부서와 문의처를 페이지에 표기하고, 사실 승인자를 지정해 주세요. 조직개편으로 담당이 바뀌었다면 현재 조직도 기준으로 적습니다.",
     detectorName: "낡음",
   },
   D3_REVIEW: {
@@ -229,6 +236,24 @@ export const ISSUE_MESSAGES: Record<string, IssueMessage> = {
     fix: "개인 계좌라면 마스킹해 주세요. 기관 계좌면 무시해도 됩니다.",
     detectorName: "개인정보",
   },
+  D9_ALT_MISSING: {
+    label: "이미지 대체텍스트 없음",
+    what: "이미지에 대체텍스트(alt)가 없어 스크린리더 사용자와 AI가 이미지 속 안내를 읽지 못합니다. 장식용이면 alt=\"\"로 표시해야 합니다.",
+    fix: "정보가 담긴 이미지에는 내용을 설명하는 대체텍스트를 넣고, 장식 이미지는 빈 alt로 표시해 주세요. 자동 검사는 후보만 찾으며 전체 접근성 적합성을 증명하지 않습니다.",
+    detectorName: "접근성·지시문",
+  },
+  D9_TH_MISSING: {
+    label: "표 머리글(th) 없음",
+    what: "표에 머리글 셀이 없어 스크린리더와 AI가 표의 열 의미를 알 수 없습니다.",
+    fix: "표의 첫 행/열을 th로 표시해 주세요.",
+    detectorName: "접근성·지시문",
+  },
+  D9_INJECTION: {
+    label: "AI 지시문 패턴(명령형 문구)",
+    what: "본문에 AI를 향한 명령형 문구가 있습니다. 이 앱은 원문을 비신뢰 데이터로만 다루지만, 다른 챗봇이 이를 지시로 읽을 수 있습니다.",
+    fix: "해당 문구가 필요한 안내가 아니면 삭제 요청. 시민 작성 글이면 관리자 검토 후 비공개 처리를 검토해 주세요.",
+    detectorName: "접근성·지시문",
+  },
   D8_EMAIL_CITIZEN: {
     label: "시민 이메일 노출",
     what: "시민이 쓴 글에 이메일 주소가 노출돼 있습니다.",
@@ -253,13 +278,26 @@ export const STATUS_LABEL: Record<string, string> = {
   regressed: "재발",
 };
 
+// 처분 = 기획서 13장 정비 결정(유지·수정·병합·현행 제외·기록 보존·보류). 삭제/폐기는 이 앱의 처분이 아니다.
 export const DISPOSITION_LABEL: Record<string, string> = {
-  update: "갱신 요청",
-  retitle: "title 수정",
-  redirect: "301 리다이렉트",
-  archive: "보관 + 색인 제외",
-  exclude_index: "색인만 제외",
   keep: "유지",
+  update: "수정(갱신 요청)",
+  retitle: "수정(title)",
+  merge: "병합(정본 지정)",
+  redirect: "병합(301 리다이렉트)",
+  exclude_index: "현행 제외(색인만)",
+  archive: "기록 보존(보관 + 색인 제외)",
+};
+
+/** 처분별 필수 승인/증빙 (기획서 13장) */
+export const DISPOSITION_EVIDENCE: Record<string, string> = {
+  keep: "소관 부서 사실 확인",
+  update: "근거 URL·시행일·차이·검토자",
+  retitle: "근거 URL·시행일·차이·검토자",
+  merge: "소관 부서 동의·URL 영향·링크 재검증",
+  redirect: "소관 부서 동의·URL 영향·링크 재검증",
+  exclude_index: "공개정책·기록 담당 결정",
+  archive: "보존 기한·책임자·위치",
 };
 
 export const REJECT_REASONS = ["오탐(문제 아님)", "이미 조치됨", "의도된 구성", "기록물(보존 필요)", "기타"];

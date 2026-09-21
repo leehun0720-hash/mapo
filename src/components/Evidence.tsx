@@ -106,6 +106,35 @@ export function Evidence({ issue }: { issue: Issue }) {
           {extra}
         </Box>
       );
+    case "D6":
+      return (
+        <Box title="6개 안내 필드 — 구조화 초안 (AI, 원문에 없는 값은 비움)">
+          {e.excerpt && <p className="text-[13px] mb-2">{e.excerpt}</p>}
+          {e.fields && (
+            <table className="tbl">
+              <thead><tr><th>필드</th><th>값</th><th>원문 인용(실재 검증)</th></tr></thead>
+              <tbody>
+                {e.fields.map((f) => (
+                  <tr key={f.name}>
+                    <td className="font-medium">{f.name}</td>
+                    <td className={f.value == null ? "text-muted" : ""}>{f.value ?? "— (원문에 없음, null)"}</td>
+                    <td className="text-[12px]">{f.quote ? `「${f.quote}」` : <span className="text-muted">없음</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="text-[11px] text-muted mt-2">초안은 자동 게시되지 않는다. 신규 수수료·기한은 메모로 추가하지 말고 승인된 새 원문을 등록해 버전을 올린 뒤 다시 초안을 만든다.</p>
+          {extra}
+        </Box>
+      );
+    case "D9":
+      return (
+        <Box title="접근성 · 지시문 패턴 (자동 검사는 후보만 찾는다)">
+          {e.excerpt && <Quote text={e.excerpt} />}
+          {extra}
+        </Box>
+      );
     case "D5":
       return (
         <Box title="URL 패턴 · 링크">

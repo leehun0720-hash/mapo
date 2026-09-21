@@ -6,7 +6,14 @@ export const RUNS: Run[] = [
     kind: "full",
     startedAt: "2026-09-07T22:00:00+09:00",
     finishedAt: "2026-09-09T05:40:00+09:00",
-    stats: { urls: 61240, docs: 10330, errorRate: 0.011, llmCostKrw: 48200, durationMin: 1900 },
+    stats: {
+      urls: 61240,
+      docs: 10330,
+      errorRate: 0.011,
+      llmCostKrw: 48200,
+      durationMin: 1900,
+      coverage: { agreed: 10680, checked: 10330, failed: { access: 142, extract: 118, unsupported: 90 } },
+    },
   },
   {
     runId: 16,
@@ -20,7 +27,14 @@ export const RUNS: Run[] = [
     kind: "incremental",
     startedAt: "2026-09-21T22:00:00+09:00",
     finishedAt: "2026-09-22T00:05:00+09:00",
-    stats: { urls: 3980, docs: 362, errorRate: 0.006, llmCostKrw: 1900, durationMin: 125 },
+    stats: {
+      urls: 3980,
+      docs: 362,
+      errorRate: 0.006,
+      llmCostKrw: 1900,
+      durationMin: 125,
+      coverage: { agreed: 380, checked: 362, failed: { access: 7, extract: 6, unsupported: 5 } },
+    },
   },
 ];
 

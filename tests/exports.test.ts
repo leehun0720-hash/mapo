@@ -30,7 +30,9 @@ describe("6.6 내보내기", () => {
   it("canonical·redirect 맵에 같은 alias가 두 번 나오지 않는다", () => {
     const cm = rows(canonicalMapCsv());
     expect(new Set(cm.map((r) => r.split(",")[0])).size).toBe(cm.length);
-    const rm = rows(redirectMapCsv(ISSUES)); // F1은 표본에서 approved
+    // F1은 표본에서 approved이지만 원문이 v3으로 바뀌어 충돌 상태 → 기준 버전을 맞춰 유효 승인으로 검사
+    const valid = ISSUES.map((i) => (i.fixtureId === "F1" ? { ...i, approvedBaseVersion: 3 } : i));
+    const rm = rows(redirectMapCsv(valid));
     expect(rm).toHaveLength(4);
     expect(new Set(rm.map((r) => r.split(",")[0])).size).toBe(4);
   });
@@ -53,7 +55,7 @@ describe("tickets.xlsx", () => {
     expect(sheetName("가".repeat(40))).toHaveLength(31);
   });
   it("승인된 이슈만 담고, 요약·전체·부서별·용어설명 시트가 있다", () => {
-    const approved = ISSUES.map((i, k) => (k < 6 ? { ...i, status: "approved" as const } : i));
+    const approved = ISSUES.map((i, k) => (k < 6 ? { ...i, status: "approved" as const, approvedBaseVersion: undefined } : i));
     const r = ticketRows(approved);
     expect(r).toHaveLength(6);
     expect(Object.keys(r[0])).toContain("무엇이 문제인가");
@@ -61,7 +63,7 @@ describe("tickets.xlsx", () => {
     expect(blob.size).toBeGreaterThan(1000);
   });
   it("워크북을 다시 읽으면 부서 시트가 생성돼 있다", async () => {
-    const approved = ISSUES.map((i, k) => (k < 6 ? { ...i, status: "approved" as const } : i));
+    const approved = ISSUES.map((i, k) => (k < 6 ? { ...i, status: "approved" as const, approvedBaseVersion: undefined } : i));
     const buf = await buildTicketsWorkbook(approved).arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     expect(wb.SheetNames[0]).toBe("요약");

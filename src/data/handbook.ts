@@ -36,7 +36,7 @@ export const HANDBOOK_CHAPTERS: HandbookChapter[] = [
 
 /** 영역 ③ 네 가지 과업 ↔ 이 앱의 탐지기·산출물 */
 export const FOUR_TASKS = [
-  { no: 1, name: "위생", detectors: ["D1", "D2", "D5", "D8"], desc: "canonical·title 템플릿·하위 도메인 중복·URL 파라미터·보관/폐기 규칙", output: "canonical 맵 · 301 맵 · title 수정 목록 · noindex 목록" },
+  { no: 1, name: "위생", detectors: ["D1", "D2", "D5", "D8", "D9"], desc: "canonical·title 템플릿·하위 도메인 중복·URL 파라미터·보관/폐기 규칙", output: "canonical 맵 · 301 맵 · title 수정 목록 · noindex 목록" },
   { no: 2, name: "구조화", detectors: ["D6"], desc: "고시공고·민원 안내를 '대상–준비물–수수료–처리기간–담당–링크' 구조로", output: "구조화 초안(AI, 필드별 인용) · 수정 요청서" },
   { no: 3, name: "쉬운 우리말", detectors: [], desc: "고시문 원문 옆 AI 요약본(국립국어원 공공언어 기준)", output: "파일럿 7주차 P5 요약 초안 (이 표본에는 없음)" },
   { no: 4, name: "신선도 감시", detectors: ["D3", "D4", "D7"], desc: "90일 미갱신·끊어진 링크·담당자 변경 페이지를 자동으로 찾아 부서에 알림", output: "주간 증분 스캔 · KPI ⑦ · 매니페스트 갱신" },
@@ -107,6 +107,7 @@ export const GLOSSARY: [string, string][] = [
 ];
 
 export const UPDATES = [
+  ["2026-09-22", "ContentCare 사업 체계 반영: 사업·견적 화면(상품 4종·원가 견적 계산·12개월 현금·90일 WBS), 검수·관문 화면(요구검수 16·오픈 관문 9·위험 10·인터뷰 10), 처분 7종·검토 주기·자기 승인 금지·버전 충돌·커버리지·knowledge.jsonl·CSV 수식 보호, D3 책임자 미입력·D9 접근성·지시문"],
   ["2026-09-21", "핸드북 연동: 디자인 체계 통일, 통합검색(/), 매뉴얼·도움말, 네 가지 과업 지도, 조직개편 후 부서명 반영"],
   ["2026-09-21", "점검 반영: 내보내기 중복 행 제거, 좁은 화면 대응, API 페이지 값 검증"],
   ["2026-09-21", "파일럿 화면 5종 + 검사 도구 + API 최초 배포"],

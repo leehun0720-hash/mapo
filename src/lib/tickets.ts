@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import type { Issue } from "@/lib/types";
 import { docById } from "@/data/docs";
 import { DETECTOR_NAMES, ISSUE_MESSAGES, SEVERITY_LABEL } from "@/data/messages";
+import { approvedAndValid, protectCell } from "@/lib/exports";
 
 /** 시트명 31자 제한·금지 문자 치환 */
 export function sheetName(name: string): string {
@@ -19,7 +20,7 @@ function dueDate(sev: string): string {
 }
 
 export function ticketRows(issues: Issue[]) {
-  const approved = issues.filter((i) => i.status === "approved");
+  const approved = issues.filter((i) => approvedAndValid(i));
   return approved.map((i, idx) => {
     const doc = docById(i.docId);
     const msg = ISSUE_MESSAGES[i.code];
@@ -28,11 +29,11 @@ export function ticketRows(issues: Issue[]) {
       번호: idx + 1,
       심각도: SEVERITY_LABEL[i.severity],
       유형: `${DETECTOR_NAMES[i.detector]} · ${msg?.label ?? i.code}`,
-      "페이지 제목": doc?.title ?? doc?.h1 ?? "(제목 없음)",
+      "페이지 제목": protectCell(doc?.title ?? doc?.h1 ?? "(제목 없음)"),
       URL: doc?.canonicalUrl ?? "",
       "무엇이 문제인가": msg?.what ?? "",
-      근거: evidence,
-      "이렇게 고쳐 주세요": [msg?.fix, i.suggestion?.text, i.suggestion?.newTitle ? `제안 제목: ${i.suggestion.newTitle}` : null].filter(Boolean).join(" "),
+      근거: protectCell(evidence),
+      "이렇게 고쳐 주세요": protectCell([msg?.fix, i.suggestion?.text, i.suggestion?.newTitle ? `제안 제목: ${i.suggestion.newTitle}` : null].filter(Boolean).join(" ")),
       "처리 기한": dueDate(i.severity),
       "처리 결과(부서 기입)": "",
       비고: [i.suggestion?.aiDraft ? "AI 초안 포함 — 게시 전 확인" : null, i.fixtureId ? `회귀 사례 ${i.fixtureId}` : null].filter(Boolean).join(", "),

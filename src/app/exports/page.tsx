@@ -4,7 +4,7 @@ import { useMounted } from "@/lib/useMounted";
 import { useMemo, useState } from "react";
 import { useIssues, useStore } from "@/store/useStore";
 import { PageHeader } from "@/components/ui";
-import { buildManifest, canonicalMapCsv, download, kpiJson, noindexCsv, redirectMapCsv, sitemapXml, titleFixesCsv } from "@/lib/exports";
+import { buildManifest, canonicalMapCsv, download, knowledgeJsonl, kpiJson, listConflicts, noindexCsv, redirectMapCsv, sitemapXml, titleFixesCsv } from "@/lib/exports";
 import { buildTicketsWorkbook, ticketRows } from "@/lib/tickets";
 
 function Card({ name, desc, count, now, onDownload, children }: { name: string; desc: string; count: string; now: string; onDownload: () => void; children?: React.ReactNode }) {
@@ -55,6 +55,8 @@ export default function ExportsPage() {
     [issues, overrides, decisions],
   );
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const conflicts = useMemo(() => listConflicts(issues), [issues]);
+  const knowledge = useMemo(() => knowledgeJsonl(issues, manifest), [issues, manifest]);
 
   if (!mounted) return <div className="p-6 text-muted">불러오는 중…</div>;
 
@@ -105,15 +107,38 @@ export default function ExportsPage() {
         <Card now={now} name="title_fixes.csv" desc="url, current_title, suggested_title, code, template — 승인된 D2만" count={`${lines(csvs.title)}행`} onDownload={() => download("title_fixes.csv", csvs.title, "text/csv;charset=utf-8")} />
         <Card now={now} name="noindex_list.csv" desc="url, reason, approved_by, approved_at — 승인된 archive·exclude_index" count={`${lines(csvs.noindex)}행`} onDownload={() => download("noindex_list.csv", csvs.noindex, "text/csv;charset=utf-8")} />
         <Card now={now} name="sitemap.xml" desc="include 문서의 canonical_url만" count={`${dist.include} URL`} onDownload={() => download("sitemap.xml", sitemapXml(manifest), "application/xml")} />
+        <Card now={now} name="knowledge.jsonl" desc="승인 지식 JSONL — include 문서 중 공개·현행·미만료만. 보존 기록·PII 후보 제외. RAG 공급자 교체가 가능한 형식" count={`${knowledge.split("\n").filter(Boolean).length}줄`} onDownload={() => download("knowledge.jsonl", knowledge, "application/x-ndjson")} />
         <Card now={now} name="kpi.json" desc="중복률·title 오류·90일 미갱신·기한 만료·사실 충돌·죽은 링크·준비도 분포·부서별 미처리·LLM 비용" count="주간 시계열 8점" onDownload={() => download("kpi.json", JSON.stringify(kpiJson(issues, manifest), null, 2), "application/json")} />
       </div>
+
+      {conflicts.length > 0 && (
+        <div className="px-6 mt-3">
+          <div className="card p-4 border-high">
+            <h2 className="font-semibold mb-1 text-high">버전 충돌 — 적용 거부(409) {conflicts.length}건</h2>
+            <p className="text-[12px] text-muted mb-2">승인 뒤 원문이 바뀐 이슈입니다. 수정 요청서·리다이렉트·title·noindex·매니페스트 title_override에서 제외했습니다. 새 원문으로 다시 검토하세요 (REQ07).</p>
+            <table className="tbl">
+              <thead><tr><th>이슈</th><th>문서</th><th>승인 기준</th><th>현재</th></tr></thead>
+              <tbody>
+                {conflicts.map(({ issue, conflict }) => (
+                  <tr key={issue.issueId}>
+                    <td className="mono text-[12px]">{issue.code}</td>
+                    <td className="mono text-[11px] break-all">{issue.evidence.compare?.[0]?.url ?? issue.docId}</td>
+                    <td className="mono">v{conflict.base}</td>
+                    <td className="mono">v{conflict.current}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="px-6 mt-3">
         <div className="card p-4">
           <h2 className="font-semibold mb-1">매니페스트 미리 보기 (표본 문서 {manifest.documents.length}건)</h2>
           <div className="overflow-x-auto">
             <table className="tbl">
-              <thead><tr><th>doc</th><th>index</th><th>사유</th><th>authority</th><th>유형</th><th>canonical_url</th><th>title_override</th></tr></thead>
+              <thead><tr><th>doc</th><th>index</th><th>사유</th><th>authority</th><th>유형</th><th>v</th><th>canonical_url</th><th>title_override</th></tr></thead>
               <tbody>
                 {manifest.documents.map((d) => (
                   <tr key={d.doc_id}>
@@ -122,6 +147,7 @@ export default function ExportsPage() {
                     <td className="mono text-[11px]">{d.reason_codes.join(", ")}</td>
                     <td className="mono">{d.authority}</td>
                     <td className="text-[12px]">{d.page_type}</td>
+                    <td className="mono">{d.version}{d.record_status === "archive" ? " 보존" : ""}</td>
                     <td className="mono text-[11px] break-all">{d.canonical_url.replace("https://", "")}</td>
                     <td className="mono text-[11px]">{d.title_override ?? ""}</td>
                   </tr>
