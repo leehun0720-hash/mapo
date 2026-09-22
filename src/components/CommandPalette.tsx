@@ -19,15 +19,15 @@ interface Hit {
 }
 
 const PAGES: Hit[] = [
-  { kind: "화면", title: "대시보드", sub: "위생 점수 · KPI ⑦ · 네 가지 과업", href: "/" },
-  { kind: "화면", title: "이슈 큐", sub: "승인 A · 반려 R · 보류 D", href: "/issues" },
-  { kind: "화면", title: "중복 클러스터", sub: "대표 URL 변경", href: "/clusters" },
-  { kind: "화면", title: "규칙 편집", sub: "시한 키워드 · 잡음 파라미터 · 게시판 쌍", href: "/rules" },
-  { kind: "화면", title: "내보내기", sub: "tickets.xlsx · manifest.json · sitemap.xml", href: "/exports" },
+  { kind: "화면", title: "업무 현황", sub: "위생 점수 · KPI ⑦ · 네 가지 과업", href: "/" },
+  { kind: "화면", title: "검토·승인", sub: "승인 A · 반려 R · 보류 D", href: "/issues" },
+  { kind: "화면", title: "중복 문서 관리", sub: "대표 URL 변경", href: "/clusters" },
+  { kind: "화면", title: "점검 기준 설정", sub: "시한 키워드 · 잡음 파라미터 · 게시판 쌍", href: "/rules" },
+  { kind: "화면", title: "결과 내려받기", sub: "tickets.xlsx · manifest.json · sitemap.xml", href: "/exports" },
   { kind: "화면", title: "검사 도구", sub: "URL 정규화 · 개인정보 · title 규칙", href: "/tools" },
   { kind: "화면", title: "사업 · 견적", sub: "상품 4종 · 원가 견적 계산 · 12개월 현금 · 90일 WBS", href: "/program" },
-  { kind: "화면", title: "검수 · 관문", sub: "요구검수 16 · 오픈 관문 9 · 위험 10 · 첫 미팅 질문 10", href: "/readiness" },
-  { kind: "화면", title: "매뉴얼 · 도움말", sub: "사용법 · 승인 5원칙 · 용어집", href: "/help" },
+  { kind: "화면", title: "운영 준비 점검", sub: "요구검수 16 · 오픈 관문 9 · 위험 10 · 첫 미팅 질문 10", href: "/readiness" },
+  { kind: "화면", title: "사용 안내", sub: "사용법 · 승인 5원칙 · 용어집", href: "/help" },
 ];
 
 function buildIndex(): Hit[] {
@@ -73,8 +73,10 @@ export function CommandPalette() {
         setOpen(false);
       }
     };
+    const show = () => { setOpen(true); setQ(""); setCursor(0); setTimeout(() => inputRef.current?.focus(), 0); };
+    window.addEventListener("open-search", show);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("open-search", show); };
   }, [open]);
 
   const go = (h: Hit) => {

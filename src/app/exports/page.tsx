@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMounted } from "@/lib/useMounted";
 import { useMemo, useState } from "react";
 import { useIssues, useStore } from "@/store/useStore";
@@ -62,18 +63,19 @@ export default function ExportsPage() {
 
   return (
     <div className="pb-10">
-      <PageHeader title="내보내기" sub="산출물은 두 갈래: 원본을 고치는 길(수정 요청서)과 인덱스를 보호하는 길(매니페스트). 승인된 이슈만 담는다." />
+      <PageHeader title="결과 내려받기" sub="승인한 내용을 파일로 저장하고, 담당 부서에 수정 작업을 요청하세요." />
+      <div className="mx-6 mb-4 quick-guide"><b>일반 담당자는 ‘부서별 수정 요청서’부터 내려받으세요.</b><p>엑셀 파일을 확인한 뒤 소관 부서에 전달하세요. 다운로드만으로 홈페이지가 수정되거나 파일이 전송되지는 않습니다.</p><Link href="/issues?grade=all">검토·승인으로 돌아가기 →</Link></div>
       <div className="px-6 grid grid-cols-1 xl:grid-cols-2 gap-3">
         <Card
           now={now}
-          name="tickets.xlsx"
+          name="부서별 수정 요청서 · tickets.xlsx"
           desc="부서별 수정 요청서 — 시트: 요약 · 전체 · 부서별 · 용어설명. 받는 사람은 비개발자."
           count={`승인 ${tickets.length}건 · 부서 ${byDept.length}곳`}
           onDownload={() => download("tickets.xlsx", buildTicketsWorkbook(issues))}
         >
           <div className="mt-2 text-[12px]">
             {byDept.length === 0 ? (
-              <span className="text-muted">이슈 큐에서 승인하면 여기에 쌓입니다.</span>
+              <span className="text-muted">아직 내려받을 승인 항목이 없습니다. 검토·승인에서 문서를 먼저 승인해 주세요.</span>
             ) : (
               <table className="tbl">
                 <thead><tr><th>부서(시트)</th><th>건수</th></tr></thead>
@@ -83,6 +85,8 @@ export default function ExportsPage() {
           </div>
         </Card>
 
+      </div>
+      <details className="mx-6 mt-5"><summary>시스템 담당자용 파일 및 연계 설정</summary><p className="text-sm text-muted mb-3">검색 시스템과 홈페이지 유지보수 담당자가 사용하는 자료입니다.</p><div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <Card
           now={now}
           name="manifest.json"
@@ -92,7 +96,7 @@ export default function ExportsPage() {
         >
           <label className="text-[12px] mt-2 flex items-center gap-2">
             <input type="checkbox" checked={approvedOnly} onChange={(e) => setApprovedOnly(e.target.checked)} />
-            approved_only — 사람이 승인한 제외만 exclude, 미승인 제안은 hold
+            승인한 제외 요청만 반영 (미승인 제안은 보류)
           </label>
           <div className="text-[12px] mt-2">
             <div className="text-muted mb-1">벤더 읽기 전용 토큰</div>
@@ -110,6 +114,8 @@ export default function ExportsPage() {
         <Card now={now} name="knowledge.jsonl" desc="승인 지식 JSONL — include 문서 중 공개·현행·미만료만. 보존 기록·PII 후보 제외. RAG 공급자 교체가 가능한 형식" count={`${knowledge.split("\n").filter(Boolean).length}줄`} onDownload={() => download("knowledge.jsonl", knowledge, "application/x-ndjson")} />
         <Card now={now} name="kpi.json" desc="중복률·title 오류·90일 미갱신·기한 만료·사실 충돌·죽은 링크·준비도 분포·부서별 미처리·LLM 비용" count="주간 시계열 8점" onDownload={() => download("kpi.json", JSON.stringify(kpiJson(issues, manifest), null, 2), "application/json")} />
       </div>
+
+      </details>
 
       {conflicts.length > 0 && (
         <div className="px-6 mt-3">
@@ -134,8 +140,8 @@ export default function ExportsPage() {
       )}
 
       <div className="px-6 mt-3">
-        <div className="card p-4">
-          <h2 className="font-semibold mb-1">매니페스트 미리 보기 (표본 문서 {manifest.documents.length}건)</h2>
+        <details className="card p-4">
+          <summary>시스템 담당자용 미리 보기 (표본 문서 {manifest.documents.length}건)</summary>
           <div className="overflow-x-auto">
             <table className="tbl">
               <thead><tr><th>doc</th><th>index</th><th>사유</th><th>authority</th><th>유형</th><th>v</th><th>canonical_url</th><th>title_override</th></tr></thead>
@@ -155,7 +161,7 @@ export default function ExportsPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </details>
       </div>
     </div>
   );

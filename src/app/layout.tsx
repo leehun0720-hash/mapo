@@ -4,6 +4,7 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { CommandPalette } from "@/components/CommandPalette";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 const sans = IBM_Plex_Sans_KR({ weight: ["400", "500", "600"], subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const mono = IBM_Plex_Mono({ weight: ["400", "500", "600"], subsets: ["latin"], variable: "--font-mono", display: "swap" });
@@ -26,10 +27,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
       <body className="min-h-screen">
+        <a className="skip-link" href="#main-content">본문 바로가기</a>
         <div className="flex flex-col lg:flex-row min-h-screen">
           <Nav />
           <div className="flex-1 min-w-0 flex flex-col">
-            <main className="flex-1 min-w-0">{children}</main>
+            <WorkspaceHeader />
+            <main id="main-content" tabIndex={-1} className="flex-1 min-w-0">{children}</main>
             <Footer />
           </div>
         </div>

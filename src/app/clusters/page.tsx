@@ -30,7 +30,7 @@ export default function ClustersPage() {
 
   return (
     <div className="pb-10">
-      <PageHeader title="중복 클러스터" sub="같은 문서의 URL 묶음. 대표 URL을 바꾸면 canonical 맵·매니페스트에 즉시 반영된다. 자동 병합은 하지 않는다." />
+      <PageHeader title="중복 문서 관리" sub="같은 문서의 URL 묶음. 대표 URL을 바꾸면 canonical 맵·매니페스트에 즉시 반영된다. 자동 병합은 하지 않는다." />
       <div className="px-6 grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-3">
         <div className="card overflow-hidden">
           {CLUSTERS.map((c) => {

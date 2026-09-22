@@ -56,7 +56,7 @@ export default function RulesPage() {
   return (
     <div className="pb-10">
       <PageHeader
-        title="규칙 편집"
+        title="점검 기준 설정"
         sub="rules/*.yaml에 해당. 임계값과 사전은 코드에 박지 않고 여기서 관리한다. 변경 이력은 감사 로그에 남는다."
         right={<button className="btn" type="button" onClick={resetRules}>초기값으로</button>}
       />

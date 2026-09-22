@@ -35,7 +35,7 @@ export function GradeBadge({ g }: { g: Grade }) {
 
 export function PageHeader({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3">
+    <div className="page-header flex items-start justify-between gap-4">
       <div>
         <h1 className="text-[20px] font-semibold leading-tight">{title}</h1>
         {sub && <p className="text-muted text-[13px] mt-1">{sub}</p>}

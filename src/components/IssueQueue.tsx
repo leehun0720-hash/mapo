@@ -34,7 +34,7 @@ export function IssueQueue() {
     else p.delete(k);
     router.replace("/issues?" + p.toString());
   };
-  const tab = get("grade") || "suggest";
+  const tab = get("grade") || "all";
 
   const filtered = useMemo(() => {
     const status = get("status");
@@ -44,14 +44,14 @@ export function IssueQueue() {
       .filter((i) => (get("severity") ? i.severity === get("severity") : true))
       .filter((i) => (get("department") ? i.department === get("department") : true))
       .filter((i) => (get("run") ? String(i.firstSeenRun) === get("run") : true))
-      .filter((i) => (status ? i.status === status : i.status === "open" || i.status === "regressed" || i.status === "deferred"))
+      .filter((i) => (status === "pending" ? i.status === "open" || i.status === "regressed" : status ? i.status === status : i.status === "open" || i.status === "regressed" || i.status === "deferred"))
       .filter((i) => {
         const q = get("q").toLowerCase();
         if (!q) return true;
         const d = docById(i.docId);
         return [i.code, i.department, d?.title, d?.h1, d?.canonicalUrl, i.evidence.excerpt].join(" ").toLowerCase().includes(q);
       })
-      .sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity] || (a.status === "regressed" ? -1 : 1) || a.issueId - b.issueId);
+      .sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity] || (Number(b.status === "regressed") - Number(a.status === "regressed")) || a.issueId - b.issueId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issues, params, tab]);
 
@@ -62,6 +62,8 @@ export function IssueQueue() {
   const [editTitle, setEditTitle] = useState("");
   const [editDisp, setEditDisp] = useState<Disposition | "">("");
   const [timing, setTiming] = useState<{ start: number; durations: number[] }>(() => ({ start: Date.now(), durations: [] }));
+  const [shortcuts, setShortcuts] = useState(false);
+  const [feedback, setFeedback] = useState("");
   const [blocked, setBlocked] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -76,35 +78,50 @@ export function IssueQueue() {
 
   const current: Issue | undefined = filtered[Math.min(cursor, Math.max(0, filtered.length - 1))];
 
+  const [editIssueId, setEditIssueId] = useState(current?.issueId);
+  if (editIssueId !== current?.issueId) {
+    setEditIssueId(current?.issueId);
+    setEditing(false);
+    setRejecting(false);
+    setEditTitle("");
+    setEditDisp("");
+  }
+
   const act = useCallback(
     (decision: "approve" | "reject" | "defer", note = "") => {
       const targets = selected.size ? [...selected] : current ? [current.issueId] : [];
       if (!targets.length) return;
+      if (!reviewer.trim()) { setBlocked("작업 담당자 이름을 입력한 뒤 처리해 주세요."); return; }
+      if (targets.length > 1 && !window.confirm(`선택한 ${targets.length}건을 모두 ${{ approve: "승인", reject: "반려", defer: "보류" }[decision]}하시겠습니까? 각 문서의 내용을 확인했는지 점검해 주세요.`)) return;
+      setFeedback("");
       const now = Date.now();
       setTiming((t) => ({ start: now, durations: [...t.durations, now - t.start].slice(-50) }));
       if (targets.length > 1) {
         const r = bulkDecide(targets, decision, note);
         setSelected(new Set());
-        setBlocked(r.blocked ? `${r.done}건 처리, ${r.blocked}건은 자기 승인 금지로 건너뜀(수정안 작성자 = 승인자).` : null);
+        setFeedback(`${r.done}건을 처리했습니다. 결과 내려받기에서 승인 내용을 확인할 수 있습니다.`);
+        setBlocked(r.blocked ? `${r.done}건 처리, ${r.blocked}건은 처리하지 못했습니다. 담당자 이름과 수정안 작성자를 확인해 주세요.` : null);
       } else {
         const iss = issues.find((i) => i.issueId === targets[0])!;
         const disp = decision === "approve" ? ((editDisp || iss.suggestion?.disposition) ?? null) : null;
         const err = decide(targets[0], decision, disp, note, editTitle || undefined);
         setBlocked(err);
         if (err) return;
+        setFeedback(`${targets.length}건을 ${{ approve: "승인", reject: "반려", defer: "보류" }[decision]}했습니다. 승인한 항목은 결과 내려받기에서 확인할 수 있습니다.`);
       }
       setEditing(false);
       setRejecting(false);
       setEditTitle("");
       setEditDisp("");
     },
-    [selected, current, issues, decide, bulkDecide, editDisp, editTitle],
+    [selected, current, issues, decide, bulkDecide, editDisp, editTitle, reviewer],
   );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (!shortcuts || e.ctrlKey || e.metaKey || e.altKey || e.repeat || document.querySelector('[aria-modal="true"]')) return;
       const t = e.target as HTMLElement;
-      if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") {
+      if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable) {
         if (e.key === "Escape") (t as HTMLInputElement).blur();
         return;
       }
@@ -148,7 +165,7 @@ export function IssueQueue() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [act, filtered.length, current, rejecting]);
+  }, [act, filtered.length, current, rejecting, shortcuts]);
 
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>(`[data-idx="${cursor}"]`)?.scrollIntoView({ block: "nearest" });
@@ -168,23 +185,25 @@ export function IssueQueue() {
   if (!mounted) return <div className="p-6 text-muted">불러오는 중…</div>;
 
   return (
-    <div className="flex flex-col lg:flex-row lg:h-screen">
+    <div>
+      <div className="px-6 py-5 border-b border-border bg-surface"><h1 className="text-2xl font-semibold">검토·승인</h1><p className="text-sm text-muted mt-2">① 목록에서 문서 선택 → ② 원문과 점검 사유 확인 → ③ 승인·반려·보류 선택</p><p className="text-sm text-muted">승인은 수정 요청서에 반영할 내용을 확정하는 작업입니다. 실제 홈페이지는 변경되지 않습니다.</p>{feedback && <p role="status" className="mt-3 text-accent">{feedback}</p>}{blocked && <p role="alert" className="mt-3 text-critical">{blocked}</p>}</div>
+    <div className="flex flex-col lg:flex-row lg:min-h-[700px]">
       {/* 왼쪽: 목록 */}
       <div className="w-full lg:w-[420px] shrink-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col max-h-[60vh] lg:max-h-none">
         <div className="p-3 border-b border-border space-y-2">
           <div className="flex gap-1" role="tablist" aria-label="등급">
             {[
-              ["suggest", "자동 제안"],
-              ["observe", "관찰"],
               ["all", "전체"],
+              ["suggest", "수정 제안"],
+              ["observe", "추가 확인"],
             ].map(([k, l]) => (
-              <button key={k} role="tab" aria-selected={tab === k} className={`btn btn-sm ${tab === k ? "btn-primary" : ""}`} onClick={() => set("grade", k === "suggest" ? "" : k)} type="button">
+              <button key={k} role="tab" aria-selected={tab === k} className={`btn btn-sm ${tab === k ? "btn-primary" : ""}`} onClick={() => set("grade", k === "all" ? "" : k)} type="button">
                 {l}
               </button>
             ))}
             <span className="ml-auto text-[12px] text-muted self-center">{filtered.length}건</span>
           </div>
-          <input className="input" placeholder="검색: 코드·제목·URL·부서 (/)" value={get("q")} onChange={(e) => set("q", e.target.value)} aria-label="검색" />
+          <input className="input" placeholder="문서 제목·부서·주소로 검색" value={get("q")} onChange={(e) => set("q", e.target.value)} aria-label="검색" />
           <div className="grid grid-cols-2 gap-1.5">
             <select className="input" value={get("detector")} onChange={(e) => set("detector", e.target.value)} aria-label="탐지기">
               <option value="">유형 전체</option>
@@ -211,6 +230,7 @@ export function IssueQueue() {
             </select>
             <select className="input" value={get("status")} onChange={(e) => set("status", e.target.value)} aria-label="상태">
               <option value="">대기·보류·재발</option>
+              <option value="pending">대기·재발</option>
               <option value="open">대기</option>
               <option value="regressed">재발</option>
               <option value="deferred">보류</option>
@@ -220,6 +240,7 @@ export function IssueQueue() {
             </select>
           </div>
         </div>
+        <div className="px-3 py-2 flex justify-between items-center border-b border-border"><span className="text-sm text-muted">긴급 항목부터 표시합니다</span><button type="button" className="btn btn-sm" onClick={() => router.replace("/issues")}>필터 초기화</button></div>
         <div ref={listRef} className="flex-1 overflow-y-auto" role="listbox" aria-label="이슈 목록">
           {filtered.length === 0 && <Empty text="조건에 맞는 이슈가 없습니다." />}
           {filtered.map((i, idx) => {
@@ -231,7 +252,8 @@ export function IssueQueue() {
                 data-idx={idx}
                 role="option"
                 aria-selected={active}
-                tabIndex={-1}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCursor(idx); } }}
                 onClick={() => setCursor(idx)}
                 className={`px-3 py-2 border-b border-border cursor-pointer flex gap-2 ${active ? "bg-accent-soft" : "hover:bg-background"}`}
               >
@@ -246,7 +268,7 @@ export function IssueQueue() {
                     setSelected(n);
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  aria-label="선택"
+                  aria-label={`${ISSUE_MESSAGES[i.code]?.label ?? i.code} 선택`}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -263,6 +285,7 @@ export function IssueQueue() {
           })}
         </div>
         <div className="p-2 border-t border-border text-[11px] text-muted flex flex-wrap gap-x-3 gap-y-1">
+          <label className="w-full flex gap-2 items-center"><input type="checkbox" checked={shortcuts} onChange={(e) => setShortcuts(e.target.checked)} />키보드 단축키 사용 (기본 꺼짐)</label>
           <span><kbd>J</kbd>/<kbd>K</kbd> 이동</span>
           <span><kbd>A</kbd> 승인</span>
           <span><kbd>R</kbd> 반려</span>
@@ -270,7 +293,7 @@ export function IssueQueue() {
           <span><kbd>E</kbd> 제안 수정</span>
           <span><kbd>X</kbd> 선택</span>
           <span><kbd>O</kbd> 원본</span>
-          {median != null && <span className="ml-auto">승인 중앙값 {median.toFixed(1)}초 (목표 ≤10)</span>}
+          {median != null && <span className="ml-auto">승인 중앙값 {median.toFixed(1)}초 </span>}
         </div>
       </div>
 
@@ -299,10 +322,10 @@ export function IssueQueue() {
                 {selected.size > 1 && <span className="text-[12px] self-center text-accent">선택 {selected.size}건 묶음 처리</span>}
                 {["open", "regressed", "deferred"].includes(current.status) || selected.size ? (
                   <>
-                    <button className="btn btn-primary" onClick={() => act("approve")} type="button">승인 <kbd>A</kbd></button>
-                    <button className="btn" onClick={() => setRejecting(true)} type="button">반려 <kbd>R</kbd></button>
-                    <button className="btn" onClick={() => act("defer")} type="button">보류 <kbd>D</kbd></button>
-                    <button className="btn" onClick={() => setEditing((v) => !v)} type="button">제안 수정 <kbd>E</kbd></button>
+                    <button className="btn btn-primary" onClick={() => act("approve")} type="button">승인하기</button>
+                    <button className="btn" onClick={() => setRejecting(true)} type="button">반려하기</button>
+                    <button className="btn" onClick={() => act("defer")} type="button">나중에 검토</button>
+                    <button className="btn" onClick={() => setEditing((v) => !v)} type="button">제안 수정</button>
                   </>
                 ) : (
                   <button className="btn" onClick={() => reopen(current.issueId)} type="button">다시 열기</button>
@@ -312,7 +335,7 @@ export function IssueQueue() {
 
             {rejecting && (
               <div className="card p-3 mt-3 border-accent" role="dialog" aria-label="반려 사유">
-                <div className="text-[13px] mb-2">반려 사유 (숫자 키로 선택) — 같은 지문은 다시 큐에 올리지 않고 골드셋 후보로 보냅니다</div>
+                <div className="text-[13px] mb-2">반려 사유를 선택하세요. 잘못된 점검 결과일 때 반려합니다.</div>
                 <div className="flex flex-wrap gap-1.5">
                   {REJECT_REASONS.map((r, i) => (
                     <button key={r} className="btn btn-sm" onClick={() => act("reject", r)} type="button"><kbd>{i + 1}</kbd> {r}</button>
@@ -437,6 +460,7 @@ export function IssueQueue() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMounted } from "@/lib/useMounted";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
@@ -47,13 +48,13 @@ export default function Dashboard() {
   const prev = KPI_SERIES[KPI_SERIES.length - 2];
   const run = RUNS.find((r) => r.runId === CURRENT_RUN)!;
 
-  const go = (q: Record<string, string>) => router.push("/issues?" + new URLSearchParams(q).toString());
+  const go = (q: Record<string, string>) => router.push("/issues?" + new URLSearchParams({ grade: "all", ...q }).toString());
 
   return (
     <div className="pb-10">
       <PageHeader
-        title="대시보드"
-        sub={`실행 #${run.runId} · ${run.kind} · URL ${run.stats.urls.toLocaleString()}건 · 오류율 ${pct(run.stats.errorRate)} · LLM 비용 ${run.stats.llmCostKrw.toLocaleString()}원`}
+        title="업무 현황"
+        sub="홈페이지의 정보 상태를 확인하고, 검토가 필요한 문서부터 처리하세요."
         right={
           <div className="flex gap-1.5 no-print">
             <button className="btn btn-sm" type="button" onClick={() => window.print()}>
@@ -65,22 +66,27 @@ export default function Dashboard() {
           </div>
         }
       />
-      <div className="px-6 pb-3 flex flex-wrap gap-2 items-center text-[12px] text-muted">
-        <span className="eyebrow">THREE SENTENCES</span>
-        <span>AI는 홈페이지의 거울이다 — 콘텐츠 정비가 먼저.</span>
-        <span className="hidden md:inline">·</span>
-        <span>비용의 본체는 GPU가 아니다 — 정비·측정·운영.</span>
-        <span className="hidden md:inline">·</span>
-        <span>측정 방법을 먼저 공개한다.</span>
-      </div>
+      <section className="px-6 mb-6" aria-label="오늘의 업무 안내">
+        <div className="task-intro">
+          <div><div className="eyebrow">담당자 업무 안내</div><h2>오늘 확인할 문서가 있습니다</h2><p>긴급 항목부터 내용을 확인하세요. 판단이 어려운 문서는 보류할 수 있습니다.</p></div>
+          <Link href="/issues?grade=all" className="btn btn-primary">검토 시작하기 →</Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+          <Stat label="긴급 검토" value={mounted ? `${critical.length}건` : "–"} hint="개인정보 등 우선 확인이 필요한 항목" tone="critical" onClick={() => go({ grade: "all", severity: "critical" })} />
+          <Stat label="검토 대기" value={mounted ? `${open.length}건` : "–"} hint="대기·재발 문서를 확인하세요" tone="accent" onClick={() => go({ grade: "all", status: "pending" })} />
+          <Stat label="승인한 문서" value={mounted ? `${issues.filter(i => i.status === "approved").length}건` : "–"} hint="승인 내용을 수정 요청서로 내려받으세요" onClick={() => router.push("/exports")} />
+        </div>
+        <div className="quick-guide"><b>처음 사용하는 담당자를 위한 3단계</b><ol><li><span>1</span>문서를 선택하고 원문과 점검 사유를 확인합니다.</li><li><span>2</span>제안이 맞으면 승인, 틀리면 반려, 확인이 더 필요하면 보류합니다.</li><li><span>3</span>결과 내려받기에서 수정 요청서를 받아 소관 부서에 전달합니다.</li></ol><Link href="/help">자세한 사용 안내 →</Link></div>
+      </section>
+      <div className="px-6 mb-3"><h2 className="font-semibold text-lg">전체 점검 현황</h2><p className="text-muted text-sm">최근 점검 #{run.runId} · 점검 주소 {run.stats.urls.toLocaleString()}건 · 아래 수치는 시연용 전체 집계이며 검토 목록의 표본 건수와 다를 수 있습니다.</p></div>
 
       <section className="px-6 grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3" aria-label="KPI 요약">
         <Stat label="중복률" value={pct(latest.dupRate)} hint={`지난주 ${pct(prev.dupRate)}`} onClick={() => go({ detector: "D1" })} />
-        <Stat label="title 오류" value={latest.titleErrors.toLocaleString()} hint={`지난주 ${prev.titleErrors.toLocaleString()}`} onClick={() => go({ detector: "D2" })} />
+        <Stat label="페이지 제목 오류" value={latest.titleErrors.toLocaleString()} hint={`지난주 ${prev.titleErrors.toLocaleString()}`} onClick={() => go({ detector: "D2" })} />
         <Stat label="90일 미갱신" value={latest.stale90d.toLocaleString()} hint="KPI ⑦ · 지표만 집계(이슈 아님)" />
         <Stat label="기한 만료" value={latest.expired.toLocaleString()} hint={`지난주 ${prev.expired}`} onClick={() => go({ detector: "D3" })} />
         <Stat label="사실 충돌" value={latest.factConflicts} hint={`지난주 ${prev.factConflicts}`} onClick={() => go({ detector: "D7" })} />
-        <Stat label="죽은 링크" value={latest.brokenLinks} hint={`지난주 ${prev.brokenLinks}`} onClick={() => go({ detector: "D5" })} />
+        <Stat label="연결되지 않는 링크" value={latest.brokenLinks} hint={`지난주 ${prev.brokenLinks}`} onClick={() => go({ detector: "D5" })} />
       </section>
 
       {run.stats.coverage && (
@@ -101,6 +107,7 @@ export default function Dashboard() {
         </section>
       )}
 
+      <details className="mx-6 mt-4"><summary>세부 관리 지표와 업무 범위 보기</summary>
       <section className="px-6 mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3" aria-label="네 가지 과업">
         <div className="card p-4 xl:col-span-2">
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
@@ -180,6 +187,8 @@ export default function Dashboard() {
         </div>
       </section>
 
+      </details>
+
       <section className="px-6 mt-4 grid grid-cols-1 xl:grid-cols-3 gap-3">
         <div className="card p-4 xl:col-span-2">
           <div className="flex items-baseline justify-between mb-2">
@@ -200,8 +209,8 @@ export default function Dashboard() {
                   <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", fontSize: 12 }} />
                   <Line yAxisId="l" type="monotone" dataKey="dupPct" name="중복률(%)" stroke="var(--accent)" strokeWidth={2} dot={false} />
                   <Line yAxisId="l" type="monotone" dataKey="incPct" name="매니페스트 포함(%)" stroke="var(--low)" strokeWidth={2} dot={false} />
-                  <Line yAxisId="r" type="monotone" dataKey="titleErrors" name="title 오류(건)" stroke="var(--high)" strokeWidth={2} dot={false} />
-                  <Line yAxisId="r" type="monotone" dataKey="brokenLinks" name="죽은 링크(건)" stroke="var(--medium)" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+                  <Line yAxisId="r" type="monotone" dataKey="titleErrors" name="페이지 제목 오류(건)" stroke="var(--high)" strokeWidth={2} dot={false} />
+                  <Line yAxisId="r" type="monotone" dataKey="brokenLinks" name="연결되지 않는 링크(건)" stroke="var(--medium)" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -211,7 +220,7 @@ export default function Dashboard() {
         <div className="card p-4">
           <h2 className="font-semibold mb-2">이번 실행</h2>
           <div className="grid grid-cols-2 gap-2">
-            <Stat label="대기 이슈" value={mounted ? open.length : "–"} onClick={() => go({ status: "open" })} tone="accent" />
+            <Stat label="대기 이슈" value={mounted ? open.length : "–"} onClick={() => go({ status: "pending" })} tone="accent" />
             <Stat label="새 이슈" value={mounted ? newThisRun.length : "–"} hint={`실행 #${CURRENT_RUN}`} onClick={() => go({ run: String(CURRENT_RUN) })} />
             <Stat label="재발" value={mounted ? regressed.length : "–"} onClick={() => go({ status: "regressed" })} tone={regressed.length ? "critical" : undefined} />
             <Stat label="개인정보 긴급" value={mounted ? critical.length : "–"} hint="즉시 알림 대상" onClick={() => go({ severity: "critical" })} tone={critical.length ? "critical" : undefined} />

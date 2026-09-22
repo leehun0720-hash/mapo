@@ -47,7 +47,7 @@ export default function ReadinessPage() {
 
   return (
     <div className="pb-10">
-      <PageHeader title="검수 · 관문" sub="기능이 기획서에 있다는 이유만으로 구현 또는 검증 완료로 표시하지 않는다. 목표를 달성 실적으로 홍보하지 않는다." />
+      <PageHeader title="운영 준비 점검" sub="기능이 기획서에 있다는 이유만으로 구현 또는 검증 완료로 표시하지 않는다. 목표를 달성 실적으로 홍보하지 않는다." />
       <div className="px-6 space-y-3">
         <section className="card p-4">
           <div className="eyebrow">RELEASE STATUS</div>
